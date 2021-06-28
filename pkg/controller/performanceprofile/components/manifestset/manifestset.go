@@ -47,8 +47,8 @@ func (ms *ManifestResultSet) ToManifestTable() ManifestTable {
 }
 
 // GetNewComponents return a list of all component's instances that should be created according to profile
-func GetNewComponents(profile *performancev2.PerformanceProfile, assetDir *string) (*ManifestResultSet, error) {
-	mc, err := machineconfig.New(*assetDir, profile)
+func GetNewComponents(profile *performancev2.PerformanceProfile, assetDir *string, isWorkloadPartitionEnabled bool) (*ManifestResultSet, error) {
+	mc, err := machineconfig.New(*assetDir, profile, isWorkloadPartitionEnabled)
 	if err != nil {
 		return nil, err
 	}

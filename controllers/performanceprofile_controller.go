@@ -352,13 +352,14 @@ func (r *PerformanceProfileReconciler) ppRequestsFromMCP(o handler.MapObject) []
 }
 
 func (r *PerformanceProfileReconciler) applyComponents(profile *performancev2.PerformanceProfile) (*reconcile.Result, error) {
-
+	// TODO this variable value based on the workloadPartition CR
+	isWorkloadPartitionEnabled := true
 	if profileutil.IsPaused(profile) {
 		klog.Infof("Ignoring reconcile loop for pause performance profile %s", profile.Name)
 		return nil, nil
 	}
 
-	components, err := manifestset.GetNewComponents(profile, &r.AssetsDir)
+	components, err := manifestset.GetNewComponents(profile, &r.AssetsDir, isWorkloadPartitionEnabled)
 	if err != nil {
 		return nil, err
 	}

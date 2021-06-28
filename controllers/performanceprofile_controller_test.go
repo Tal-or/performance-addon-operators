@@ -333,7 +333,7 @@ var _ = Describe("Controller", func() {
 
 			BeforeEach(func() {
 				var err error
-				mc, err = machineconfig.New(assetsDir, profile)
+				mc, err = machineconfig.New(assetsDir, profile, false)
 				Expect(err).ToNot(HaveOccurred())
 
 				kc, err = kubeletconfig.New(profile)
@@ -721,7 +721,7 @@ var _ = Describe("Controller", func() {
 
 		It("should remove all components and remove the finalizer on first reconcile loop", func() {
 
-			mc, err := machineconfig.New(assetsDir, profile)
+			mc, err := machineconfig.New(assetsDir, profile, false)
 			Expect(err).ToNot(HaveOccurred())
 
 			kc, err := kubeletconfig.New(profile)

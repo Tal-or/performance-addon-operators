@@ -42,11 +42,14 @@ const (
 	// OCIHooksConfigDir is the default directory for the OCI hooks
 	OCIHooksConfigDir = "/etc/containers/oci/hooks.d"
 	// OCIHooksConfig file contains the low latency hooks configuration
-	OCIHooksConfig     = "99-low-latency-hooks"
-	ociTemplateRPSMask = "RPSMask"
-	udevRulesDir       = "/etc/udev/rules.d"
-	udevRpsRule        = "99-netdev-rps"
-	setRPSMask         = "set-rps-mask"
+	OCIHooksConfig           = "99-low-latency-hooks"
+	ociTemplateRPSMask       = "RPSMask"
+	udevRulesDir             = "/etc/udev/rules.d"
+	udevRpsRule              = "99-netdev-rps"
+	setRPSMask               = "set-rps-mask"
+	crioWorkloadMngConfig    = "01-workload-partitioning.conf"
+	workloadPinningConfigDir = "/etc/kubernetes"
+	workloadPinningConfig    = "openshift-workload-pinning"
 )
 
 const (
@@ -80,7 +83,7 @@ const (
 )
 
 // New returns new machine configuration object for performance sensitive workloads
-func New(assetsDir string, profile *performancev2.PerformanceProfile) (*machineconfigv1.MachineConfig, error) {
+func New(assetsDir string, profile *performancev2.PerformanceProfile, mngPartition bool) (*machineconfigv1.MachineConfig, error) {
 	name := GetMachineConfigName(profile)
 	mc := &machineconfigv1.MachineConfig{
 		TypeMeta: metav1.TypeMeta{
@@ -94,7 +97,7 @@ func New(assetsDir string, profile *performancev2.PerformanceProfile) (*machinec
 		Spec: machineconfigv1.MachineConfigSpec{},
 	}
 
-	ignitionConfig, err := getIgnitionConfig(assetsDir, profile)
+	ignitionConfig, err := getIgnitionConfig(assetsDir, profile, mngPartition)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +127,7 @@ func GetMachineConfigName(profile *performancev2.PerformanceProfile) string {
 	return fmt.Sprintf("50-%s", name)
 }
 
-func getIgnitionConfig(assetsDir string, profile *performancev2.PerformanceProfile) (*igntypes.Config, error) {
+func getIgnitionConfig(assetsDir string, profile *performancev2.PerformanceProfile, mngPartition bool) (*igntypes.Config, error) {
 	ignitionConfig := &igntypes.Config{
 		Ignition: igntypes.Ignition{
 			Version: defaultIgnitionVersion,
@@ -157,6 +160,39 @@ func getIgnitionConfig(assetsDir string, profile *performancev2.PerformanceProfi
 		&crioConfdRuntimesMode,
 	); err != nil {
 		return nil, err
+	}
+
+	// add crio config snippet under the node /etc/crio/crio.conf.d/ directory
+	if mngPartition && profile.Spec.CPU.Reserved != nil {
+		crioConfWorkloadMngPartitionMode := 0644
+		crioConfWorkloadMngPartitionContent, err := addCrioConfigSnippet(profile, filepath.Join(assetsDir, "configs", crioWorkloadMngConfig))
+		if err != nil {
+			return nil, err
+		}
+
+		if err := addContent(
+			ignitionConfig,
+			crioConfWorkloadMngPartitionContent,
+			filepath.Join(crioConfd, crioWorkloadMngConfig),
+			&crioConfWorkloadMngPartitionMode,
+		); err != nil {
+			return nil, err
+		}
+
+		workloadPinningMode := 0644
+		config := fmt.Sprintf("%s.json", workloadPinningConfig)
+		workloadPinningContent, err := addCrioConfigSnippet(profile, filepath.Join(assetsDir, "configs", config))
+		if err != nil {
+			return nil, err
+		}
+		if err := addContent(
+			ignitionConfig,
+			workloadPinningContent,
+			filepath.Join(workloadPinningConfigDir, config),
+			&workloadPinningMode,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	// add crio hooks config  under the node cri-o hook directory

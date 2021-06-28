@@ -40,9 +40,9 @@ var _ = Describe("Machine Config", func() {
 		It("should create machine config with valid assests", func() {
 			profile := testutils.NewPerformanceProfile("test")
 			profile.Spec.HugePages.Pages[0].Node = pointer.Int32Ptr(0)
-			_, err := New(testAssetsDir, profile)
+			_, err := New(testAssetsDir, profile, false)
 			Expect(err).ToNot(HaveOccurred())
-			_, err = New("../../../../../build/invalid/assets", profile)
+			_, err = New("../../../../../build/invalid/assets", profile, false)
 			Expect(err).Should(HaveOccurred(), "should fail with missing CPU")
 		})
 	})
@@ -54,7 +54,7 @@ var _ = Describe("Machine Config", func() {
 			profile := testutils.NewPerformanceProfile("test")
 			profile.Spec.HugePages.Pages[0].Node = pointer.Int32Ptr(0)
 
-			mc, err := New(testAssetsDir, profile)
+			mc, err := New(testAssetsDir, profile, false)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(mc.Spec.KernelType).To(Equal(MCKernelRT))
 
