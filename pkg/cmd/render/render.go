@@ -25,9 +25,9 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	performancev2 "github.com/openshift-kni/performance-addon-operators/api/v2"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/manifestset"
+	profileutil "github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -139,13 +139,13 @@ func (r *renderOpts) Run() error {
 			return err
 		}
 
-		profile := &performancev2.PerformanceProfile{}
-		err = yaml.Unmarshal(b, profile)
+		profile := &profileutil.PerformanceProfileInfo{}
+		err = yaml.Unmarshal(b, &profile.PerformanceProfile)
 		if err != nil {
 			return err
 		}
 
-		components, err := manifestset.GetNewComponents(profile, &r.assetsInDir, r.workloadPartitioningEnabled)
+		components, err := manifestset.GetNewComponents(profile, &r.assetsInDir)
 		if err != nil {
 			return err
 		}

@@ -5,7 +5,6 @@ import (
 	"context"
 	"time"
 
-	performancev2 "github.com/openshift-kni/performance-addon-operators/api/v2"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
 	profileutil "github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 	tunedv1 "github.com/openshift/cluster-node-tuning-operator/pkg/apis/tuned/v1"
@@ -31,7 +30,7 @@ const (
 	conditionFailedGettingTunedProfileStatus = "GettingTunedStatusFailed"
 )
 
-func (r *PerformanceProfileReconciler) updateStatus(profile *performancev2.PerformanceProfile, conditions []conditionsv1.Condition) error {
+func (r *PerformanceProfileReconciler) updateStatus(profile *profileutil.PerformanceProfileInfo, conditions []conditionsv1.Condition) error {
 	profileCopy := profile.DeepCopy()
 
 	if conditions != nil {
@@ -174,7 +173,7 @@ func (r *PerformanceProfileReconciler) getProgressingConditions(reason string, m
 	}
 }
 
-func (r *PerformanceProfileReconciler) getMCPConditionsByProfile(profile *performancev2.PerformanceProfile) ([]conditionsv1.Condition, error) {
+func (r *PerformanceProfileReconciler) getMCPConditionsByProfile(profile *profileutil.PerformanceProfileInfo) ([]conditionsv1.Condition, error) {
 	mcpList := &mcov1.MachineConfigPoolList{}
 	if err := r.List(context.TODO(), mcpList); err != nil {
 		klog.Errorf("Cannot list Machine config pools to match with profile %q : %v", profile.Name, err)
@@ -218,7 +217,7 @@ func (r *PerformanceProfileReconciler) getMCPConditionsByProfile(profile *perfor
 	return r.getDegradedConditions(conditionReasonMCPDegraded, messageString), nil
 }
 
-func (r *PerformanceProfileReconciler) getKubeletConditionsByProfile(profile *performancev2.PerformanceProfile) ([]conditionsv1.Condition, error) {
+func (r *PerformanceProfileReconciler) getKubeletConditionsByProfile(profile *profileutil.PerformanceProfileInfo) ([]conditionsv1.Condition, error) {
 	name := components.GetComponentName(profile.Name, components.ComponentNamePrefix)
 	kc, err := r.getKubeletConfig(name)
 
@@ -243,7 +242,7 @@ func (r *PerformanceProfileReconciler) getKubeletConditionsByProfile(profile *pe
 	return r.getDegradedConditions(conditionKubeletFailed, latestCondition.Message), nil
 }
 
-func (r *PerformanceProfileReconciler) getTunedConditionsByProfile(profile *performancev2.PerformanceProfile) ([]conditionsv1.Condition, error) {
+func (r *PerformanceProfileReconciler) getTunedConditionsByProfile(profile *profileutil.PerformanceProfileInfo) ([]conditionsv1.Condition, error) {
 	tunedProfileList := &tunedv1.ProfileList{}
 	if err := r.List(context.TODO(), tunedProfileList); err != nil {
 		klog.Errorf("Cannot list Tuned Profiles to match with profile %q : %v", profile.Name, err)

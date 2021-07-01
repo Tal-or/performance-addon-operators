@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"time"
 
-	performancev2 "github.com/openshift-kni/performance-addon-operators/api/v2"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
 	profile2 "github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 	machineconfigv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -23,7 +22,7 @@ const (
 )
 
 // New returns new KubeletConfig object for performance sensetive workflows
-func New(profile *performancev2.PerformanceProfile) (*machineconfigv1.KubeletConfig, error) {
+func New(profile *profile2.PerformanceProfileInfo) (*machineconfigv1.KubeletConfig, error) {
 	name := components.GetComponentName(profile.Name, components.ComponentNamePrefix)
 	kubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{
 		TypeMeta: metav1.TypeMeta{

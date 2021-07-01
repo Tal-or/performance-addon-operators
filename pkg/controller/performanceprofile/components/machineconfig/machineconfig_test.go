@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
+	profileutil "github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 	testutils "github.com/openshift-kni/performance-addon-operators/pkg/utils/testing"
 )
 
@@ -38,11 +39,12 @@ var _ = Describe("Machine Config", func() {
 
 	Context("machine config creation ", func() {
 		It("should create machine config with valid assests", func() {
-			profile := testutils.NewPerformanceProfile("test")
+			profile := &profileutil.PerformanceProfileInfo{}
+			profile.PerformanceProfile = *testutils.NewPerformanceProfile("test")
 			profile.Spec.HugePages.Pages[0].Node = pointer.Int32Ptr(0)
-			_, err := New(testAssetsDir, profile, false)
+			_, err := New(testAssetsDir, profile)
 			Expect(err).ToNot(HaveOccurred())
-			_, err = New("../../../../../build/invalid/assets", profile, false)
+			_, err = New("../../../../../build/invalid/assets", profile)
 			Expect(err).Should(HaveOccurred(), "should fail with missing CPU")
 		})
 	})
@@ -51,10 +53,11 @@ var _ = Describe("Machine Config", func() {
 		var manifest string
 
 		BeforeEach(func() {
-			profile := testutils.NewPerformanceProfile("test")
+			profile := &profileutil.PerformanceProfileInfo{}
+			profile.PerformanceProfile = *testutils.NewPerformanceProfile("test")
 			profile.Spec.HugePages.Pages[0].Node = pointer.Int32Ptr(0)
 
-			mc, err := New(testAssetsDir, profile, false)
+			mc, err := New(testAssetsDir, profile)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(mc.Spec.KernelType).To(Equal(MCKernelRT))
 

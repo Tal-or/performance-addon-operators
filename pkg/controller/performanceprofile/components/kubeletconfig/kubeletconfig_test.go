@@ -8,12 +8,14 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
+	profileutil "github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 	testutils "github.com/openshift-kni/performance-addon-operators/pkg/utils/testing"
 )
 
 var _ = Describe("Kubelet Config", func() {
 	It("should generate yaml with expected parameters", func() {
-		profile := testutils.NewPerformanceProfile("test")
+		profile := &profileutil.PerformanceProfileInfo{}
+		profile.PerformanceProfile = *testutils.NewPerformanceProfile("test")
 		kc, err := New(profile)
 		Expect(err).ToNot(HaveOccurred())
 

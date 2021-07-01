@@ -140,7 +140,7 @@ func (r *PerformanceProfileReconciler) mcpToPerformanceProfile(mcpObj handler.Ma
 
 	var requests []reconcile.Request
 	for i, profile := range profiles.Items {
-		machineConfigPoolSelector := labels.Set(profileutil.GetMachineConfigPoolSelector(&profile))
+		machineConfigPoolSelector := labels.Set(profileutil.GetMachineConfigPoolSelector(&profileutil.PerformanceProfileInfo{PerformanceProfile: profile}))
 		selector, err := metav1.LabelSelectorAsSelector(mcp.Spec.MachineConfigSelector)
 		if err != nil {
 			klog.Errorf("failed to parse the selector %v", mcp.Spec.MachineConfigSelector)
@@ -195,8 +195,8 @@ func (r *PerformanceProfileReconciler) Reconcile(req ctrl.Request) (ctrl.Result,
 	klog.Info("Reconciling PerformanceProfile")
 
 	// Fetch the PerformanceProfile instance
-	instance := &performancev2.PerformanceProfile{}
-	err := r.Get(context.TODO(), req.NamespacedName, instance)
+	instance := &profileutil.PerformanceProfileInfo{}
+	err := r.Get(context.TODO(), req.NamespacedName, &instance.PerformanceProfile)
 	if err != nil {
 		if k8serros.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -207,6 +207,8 @@ func (r *PerformanceProfileReconciler) Reconcile(req ctrl.Request) (ctrl.Result,
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	r.getAdditionalInfo(instance)
 
 	if instance.DeletionTimestamp != nil {
 		// delete components
@@ -306,13 +308,13 @@ func (r *PerformanceProfileReconciler) Reconcile(req ctrl.Request) (ctrl.Result,
 	return ctrl.Result{}, nil
 }
 
-func (r *PerformanceProfileReconciler) deleteDeprecatedComponents(instance *performancev2.PerformanceProfile) error {
+func (r *PerformanceProfileReconciler) deleteDeprecatedComponents(instance *profileutil.PerformanceProfileInfo) error {
 	// remove the machine config with the deprecated name
 	name := components.GetComponentName(instance.Name, components.ComponentNamePrefix)
 	return r.deleteMachineConfig(name)
 }
 
-func (r *PerformanceProfileReconciler) updateDegradedCondition(instance *performancev2.PerformanceProfile, conditionState string, conditionError error) (ctrl.Result, error) {
+func (r *PerformanceProfileReconciler) updateDegradedCondition(instance *profileutil.PerformanceProfileInfo, conditionState string, conditionError error) (ctrl.Result, error) {
 	conditions := r.getDegradedConditions(conditionState, conditionError.Error())
 	if err := r.updateStatus(instance, conditions); err != nil {
 		klog.Errorf("failed to update performance profile %q status: %v", instance.Name, err)
@@ -343,7 +345,8 @@ func (r *PerformanceProfileReconciler) ppRequestsFromMCP(o handler.MapObject) []
 
 	var requests []reconcile.Request
 	for k := range ppList.Items {
-		if hasMatchingLabels(&ppList.Items[k], mcp) {
+		ppInfo := profileutil.PerformanceProfileInfo{PerformanceProfile: ppList.Items[k]}
+		if hasMatchingLabels(&ppInfo, mcp) {
 			requests = append(requests, reconcile.Request{NamespacedName: namespacedName(&ppList.Items[k])})
 		}
 	}
@@ -351,15 +354,13 @@ func (r *PerformanceProfileReconciler) ppRequestsFromMCP(o handler.MapObject) []
 	return requests
 }
 
-func (r *PerformanceProfileReconciler) applyComponents(profile *performancev2.PerformanceProfile) (*reconcile.Result, error) {
-	// TODO this variable value based on the workloadPartition CR
-	isWorkloadPartitionEnabled := true
+func (r *PerformanceProfileReconciler) applyComponents(profile *profileutil.PerformanceProfileInfo) (*reconcile.Result, error) {
 	if profileutil.IsPaused(profile) {
 		klog.Infof("Ignoring reconcile loop for pause performance profile %s", profile.Name)
 		return nil, nil
 	}
 
-	components, err := manifestset.GetNewComponents(profile, &r.AssetsDir, isWorkloadPartitionEnabled)
+	components, err := manifestset.GetNewComponents(profile, &r.AssetsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +432,7 @@ func (r *PerformanceProfileReconciler) applyComponents(profile *performancev2.Pe
 	return &reconcile.Result{}, nil
 }
 
-func (r *PerformanceProfileReconciler) deleteComponents(profile *performancev2.PerformanceProfile) error {
+func (r *PerformanceProfileReconciler) deleteComponents(profile *profileutil.PerformanceProfileInfo) error {
 	tunedName := components.GetComponentName(profile.Name, components.ProfileNamePerformance)
 	if err := r.deleteTuned(tunedName, components.NamespaceNodeTuningOperator); err != nil {
 		return err
@@ -454,7 +455,7 @@ func (r *PerformanceProfileReconciler) deleteComponents(profile *performancev2.P
 
 }
 
-func (r *PerformanceProfileReconciler) isComponentsExist(profile *performancev2.PerformanceProfile) bool {
+func (r *PerformanceProfileReconciler) isComponentsExist(profile *profileutil.PerformanceProfileInfo) bool {
 	tunedName := components.GetComponentName(profile.Name, components.ProfileNamePerformance)
 	if _, err := r.getTuned(tunedName, components.NamespaceNodeTuningOperator); !k8serros.IsNotFound(err) {
 		klog.Infof("Tuned %q custom resource is still exists under the namespace %q", tunedName, components.NamespaceNodeTuningOperator)
@@ -480,7 +481,11 @@ func (r *PerformanceProfileReconciler) isComponentsExist(profile *performancev2.
 	return false
 }
 
-func hasFinalizer(profile *performancev2.PerformanceProfile, finalizer string) bool {
+func (r *PerformanceProfileReconciler) getAdditionalInfo(profile *profileutil.PerformanceProfileInfo) {
+	//workloadPratition := &r.Get(context.TODO())
+}
+
+func hasFinalizer(profile *profileutil.PerformanceProfileInfo, finalizer string) bool {
 	for _, f := range profile.Finalizers {
 		if f == finalizer {
 			return true
@@ -489,7 +494,7 @@ func hasFinalizer(profile *performancev2.PerformanceProfile, finalizer string) b
 	return false
 }
 
-func removeFinalizer(profile *performancev2.PerformanceProfile, finalizer string) {
+func removeFinalizer(profile *profileutil.PerformanceProfileInfo, finalizer string) {
 	var finalizers []string
 	for _, f := range profile.Finalizers {
 		if f == finalizer {
@@ -507,7 +512,7 @@ func namespacedName(obj metav1.Object) types.NamespacedName {
 	}
 }
 
-func hasMatchingLabels(performanceprofile *performancev2.PerformanceProfile, mcp *mcov1.MachineConfigPool) bool {
+func hasMatchingLabels(performanceprofile *profileutil.PerformanceProfileInfo, mcp *mcov1.MachineConfigPool) bool {
 
 	selector, err := metav1.LabelSelectorAsSelector(mcp.Spec.MachineConfigSelector)
 	if err != nil {

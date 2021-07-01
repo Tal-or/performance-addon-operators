@@ -25,13 +25,14 @@ import (
 	"github.com/openshift-kni/performance-addon-operators/functests/utils/nodes"
 	"github.com/openshift-kni/performance-addon-operators/functests/utils/profiles"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
+	profileutil "github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 )
 
 type checkFunction func(*corev1.Node) (string, error)
 
 var _ = Describe("[rfe_id:28761][performance] Updating parameters in performance profile", func() {
 	var workerRTNodes []corev1.Node
-	var profile, initialProfile *performancev2.PerformanceProfile
+	var profile, initialProfile *profileutil.PerformanceProfileInfo
 	var performanceMCP string
 	var err error
 
@@ -74,8 +75,9 @@ var _ = Describe("[rfe_id:28761][performance] Updating parameters in performance
 		workerRTNodes, err = nodes.MatchingOptionalSelector(workerRTNodes)
 		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("error looking for the optional selector: %v", err))
 		Expect(workerRTNodes).ToNot(BeEmpty(), "cannot find RT enabled worker nodes")
-		profile, err = profiles.GetByNodeLabels(nodeLabel)
+		pPerformanceProfile, err := profiles.GetByNodeLabels(nodeLabel)
 		Expect(err).ToNot(HaveOccurred())
+		profile.PerformanceProfile = *pPerformanceProfile
 		performanceMCP, err = mcps.GetByProfile(profile)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -137,7 +139,7 @@ var _ = Describe("[rfe_id:28761][performance] Updating parameters in performance
 			Expect(err).ToNot(HaveOccurred())
 
 			By("Modifying profile")
-			initialProfile = profile.DeepCopy()
+			initialProfile.PerformanceProfile = *profile.PerformanceProfile.DeepCopy()
 
 			irqLoadBalancingDisabled = !irqLoadBalancingDisabled
 			profile.Spec.GloballyDisableIrqLoadBalancing = &irqLoadBalancingDisabled
@@ -172,7 +174,7 @@ var _ = Describe("[rfe_id:28761][performance] Updating parameters in performance
 		// Modify profile and verify that MCO successfully updated the node
 		testutils.BeforeAll(func() {
 			By("Modifying profile")
-			initialProfile = profile.DeepCopy()
+			initialProfile.PerformanceProfile = *profile.PerformanceProfile.DeepCopy()
 
 			profile.Spec.HugePages = &performancev2.HugePages{
 				DefaultHugePagesSize: &hpSize2M,
@@ -416,7 +418,7 @@ var _ = Describe("[rfe_id:28761][performance] Updating parameters in performance
 				),
 			)).ToNot(HaveOccurred())
 
-			updatedProfile := &performancev2.PerformanceProfile{}
+			updatedProfile := &profileutil.PerformanceProfileInfo{}
 			Eventually(func() string {
 				key := types.NamespacedName{
 					Name:      profile.Name,

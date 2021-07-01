@@ -5,8 +5,15 @@ import (
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
 )
 
+// PerformanceProfileInfo is a wrapper for PerformanceProfile that can hold extra data and configuration
+type PerformanceProfileInfo struct {
+	performancev2.PerformanceProfile
+	// extra data the operator cares about but which is not part of the public API
+	WorkloadPartitionEnabled bool
+}
+
 // GetMachineConfigPoolSelector returns the MachineConfigPoolSelector from the CR or a default value calculated based on NodeSelector
-func GetMachineConfigPoolSelector(profile *performancev2.PerformanceProfile) map[string]string {
+func GetMachineConfigPoolSelector(profile *PerformanceProfileInfo) map[string]string {
 	if profile.Spec.MachineConfigPoolSelector != nil {
 		return profile.Spec.MachineConfigPoolSelector
 	}
@@ -15,7 +22,7 @@ func GetMachineConfigPoolSelector(profile *performancev2.PerformanceProfile) map
 }
 
 // GetMachineConfigLabel returns the MachineConfigLabels from the CR or a default value calculated based on NodeSelector
-func GetMachineConfigLabel(profile *performancev2.PerformanceProfile) map[string]string {
+func GetMachineConfigLabel(profile *PerformanceProfileInfo) map[string]string {
 	if profile.Spec.MachineConfigLabel != nil {
 		return profile.Spec.MachineConfigLabel
 	}
@@ -23,7 +30,7 @@ func GetMachineConfigLabel(profile *performancev2.PerformanceProfile) map[string
 	return getDefaultLabel(profile)
 }
 
-func getDefaultLabel(profile *performancev2.PerformanceProfile) map[string]string {
+func getDefaultLabel(profile *PerformanceProfileInfo) map[string]string {
 	nodeSelectorKey, _ := components.GetFirstKeyAndValue(profile.Spec.NodeSelector)
 	// no error handling needed, it's validated already
 	_, nodeRole, _ := components.SplitLabelKey(nodeSelectorKey)
@@ -35,7 +42,7 @@ func getDefaultLabel(profile *performancev2.PerformanceProfile) map[string]strin
 }
 
 // IsPaused returns whether or not a performance profile's reconcile loop is paused
-func IsPaused(profile *performancev2.PerformanceProfile) bool {
+func IsPaused(profile *PerformanceProfileInfo) bool {
 	if profile.Annotations == nil {
 		return false
 	}

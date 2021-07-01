@@ -83,7 +83,7 @@ const (
 )
 
 // New returns new machine configuration object for performance sensitive workloads
-func New(assetsDir string, profile *performancev2.PerformanceProfile, mngPartition bool) (*machineconfigv1.MachineConfig, error) {
+func New(assetsDir string, profile *profile2.PerformanceProfileInfo) (*machineconfigv1.MachineConfig, error) {
 	name := GetMachineConfigName(profile)
 	mc := &machineconfigv1.MachineConfig{
 		TypeMeta: metav1.TypeMeta{
@@ -97,7 +97,7 @@ func New(assetsDir string, profile *performancev2.PerformanceProfile, mngPartiti
 		Spec: machineconfigv1.MachineConfigSpec{},
 	}
 
-	ignitionConfig, err := getIgnitionConfig(assetsDir, profile, mngPartition)
+	ignitionConfig, err := getIgnitionConfig(assetsDir, profile)
 	if err != nil {
 		return nil, err
 	}
@@ -122,12 +122,12 @@ func New(assetsDir string, profile *performancev2.PerformanceProfile, mngPartiti
 }
 
 // GetMachineConfigName generates machine config name from the performance profile
-func GetMachineConfigName(profile *performancev2.PerformanceProfile) string {
+func GetMachineConfigName(profile *profile2.PerformanceProfileInfo) string {
 	name := components.GetComponentName(profile.Name, components.ComponentNamePrefix)
 	return fmt.Sprintf("50-%s", name)
 }
 
-func getIgnitionConfig(assetsDir string, profile *performancev2.PerformanceProfile, mngPartition bool) (*igntypes.Config, error) {
+func getIgnitionConfig(assetsDir string, profile *profile2.PerformanceProfileInfo) (*igntypes.Config, error) {
 	ignitionConfig := &igntypes.Config{
 		Ignition: igntypes.Ignition{
 			Version: defaultIgnitionVersion,
@@ -163,7 +163,7 @@ func getIgnitionConfig(assetsDir string, profile *performancev2.PerformanceProfi
 	}
 
 	// add crio config snippet under the node /etc/crio/crio.conf.d/ directory
-	if mngPartition && profile.Spec.CPU.Reserved != nil {
+	if profile.WorkloadPartitionEnabled && profile.Spec.CPU.Reserved != nil {
 		crioConfWorkloadMngPartitionMode := 0644
 		crioConfWorkloadMngPartitionContent, err := addCrioConfigSnippet(profile, filepath.Join(assetsDir, "configs", crioWorkloadMngConfig))
 		if err != nil {
@@ -295,7 +295,7 @@ func getSystemdContent(options []*unit.UnitOption) (string, error) {
 }
 
 // GetOCIHooksConfigContent reads and returns the content of the OCI hook file
-func GetOCIHooksConfigContent(configFile string, profile *performancev2.PerformanceProfile) ([]byte, error) {
+func GetOCIHooksConfigContent(configFile string, profile *profile2.PerformanceProfileInfo) ([]byte, error) {
 	content, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return nil, err
@@ -385,7 +385,7 @@ func addContent(ignitionConfig *igntypes.Config, content []byte, dst string, mod
 	return nil
 }
 
-func addCrioConfigSnippet(profile *performancev2.PerformanceProfile, src string) ([]byte, error) {
+func addCrioConfigSnippet(profile *profile2.PerformanceProfileInfo, src string) ([]byte, error) {
 	templateArgs := make(map[string]string)
 	if profile.Spec.CPU.Reserved != nil {
 		templateArgs[templateReservedCpus] = string(*profile.Spec.CPU.Reserved)

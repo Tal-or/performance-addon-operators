@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	performancev2 "github.com/openshift-kni/performance-addon-operators/api/v2"
 	"github.com/openshift-kni/performance-addon-operators/functests/utils"
 	testclient "github.com/openshift-kni/performance-addon-operators/functests/utils/client"
 	testlog "github.com/openshift-kni/performance-addon-operators/functests/utils/log"
@@ -39,7 +38,7 @@ func All() {
 		return
 	}
 
-	perfProfile := performancev2.PerformanceProfile{}
+	perfProfile := profile.PerformanceProfileInfo{}
 	err := testclient.Client.Get(context.TODO(), types.NamespacedName{Name: utils.PerformanceProfileName}, &perfProfile)
 	if errors.IsNotFound(err) {
 		return

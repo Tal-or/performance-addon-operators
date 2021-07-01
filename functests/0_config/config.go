@@ -31,7 +31,7 @@ import (
 	"github.com/openshift-kni/performance-addon-operators/functests/utils/mcps"
 	"github.com/openshift-kni/performance-addon-operators/functests/utils/profiles"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
-	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
+	profileutil "github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 )
 
 var RunningOnSingleNode bool
@@ -52,8 +52,9 @@ var _ = Describe("[performance][config] Performance configuration", func() {
 		performanceManifest, foundOverride := os.LookupEnv("PERFORMANCE_PROFILE_MANIFEST_OVERRIDE")
 		var err error
 		if foundOverride {
-			performanceProfile, err = externalPerformanceProfile(performanceManifest)
+			pPerformanceProfile, err := externalPerformanceProfile(performanceManifest)
 			Expect(err).ToNot(HaveOccurred(), "Failed overriding performance profile", performanceManifest)
+			performanceProfile.PerformanceProfile = *pPerformanceProfile
 			testlog.Warningf("Consuming performance profile from %s", performanceManifest)
 		}
 		if discovery.Enabled() {
@@ -64,7 +65,7 @@ var _ = Describe("[performance][config] Performance configuration", func() {
 		}
 
 		By("Getting MCP for profile")
-		mcpLabel := profile.GetMachineConfigLabel(performanceProfile)
+		mcpLabel := profileutil.GetMachineConfigLabel(performanceProfile)
 		key, value := components.GetFirstKeyAndValue(mcpLabel)
 		mcpsByLabel, err := mcps.GetByLabel(key, value)
 		Expect(err).ToNot(HaveOccurred(), "Failed getting MCP by label key %v value %v", key, value)
@@ -133,7 +134,7 @@ func externalPerformanceProfile(performanceManifest string) (*performancev2.Perf
 	return profile, nil
 }
 
-func testProfile() *performancev2.PerformanceProfile {
+func testProfile() *profileutil.PerformanceProfileInfo {
 	reserved := performancev2.CPUSet("0")
 	isolated := performancev2.CPUSet("1-3")
 	hugePagesSize := performancev2.HugePageSize("1G")
@@ -193,5 +194,6 @@ func testProfile() *performancev2.PerformanceProfile {
 			"pools.operator.machineconfiguration.openshift.io/master": "",
 		}
 	}
-	return profile
+	profileInfo := &profileutil.PerformanceProfileInfo{PerformanceProfile: *profile}
+	return profileInfo
 }

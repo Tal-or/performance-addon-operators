@@ -16,7 +16,7 @@ import (
 	tunedv1 "github.com/openshift/cluster-node-tuning-operator/pkg/apis/tuned/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	cpuset "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
+	"k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
 
 const (
@@ -49,7 +49,7 @@ func new(name string, profiles []tunedv1.TunedProfile, recommends []tunedv1.Tune
 }
 
 // NewNodePerformance returns tuned profile for performance sensitive workflows
-func NewNodePerformance(assetsDir string, profile *performancev2.PerformanceProfile) (*tunedv1.Tuned, error) {
+func NewNodePerformance(assetsDir string, profile *componentsprofile.PerformanceProfileInfo) (*tunedv1.Tuned, error) {
 
 	templateArgs := make(map[string]string)
 

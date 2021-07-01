@@ -16,6 +16,7 @@ import (
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/kubeletconfig"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/machineconfig"
+	profileutil "github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/runtimeclass"
 	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/tuned"
 	testutils "github.com/openshift-kni/performance-addon-operators/pkg/utils/testing"
@@ -42,10 +43,10 @@ const assetsDir = "../build/assets"
 
 var _ = Describe("Controller", func() {
 	var request reconcile.Request
-	var profile *performancev2.PerformanceProfile
+	var profile *profileutil.PerformanceProfileInfo
 
 	BeforeEach(func() {
-		profile = testutils.NewPerformanceProfile("test")
+		profile.PerformanceProfile = *testutils.NewPerformanceProfile("test")
 		request = reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Namespace: metav1.NamespaceNone,
@@ -59,7 +60,7 @@ var _ = Describe("Controller", func() {
 
 		Expect(reconcileTimes(r, request, 1)).To(Equal(reconcile.Result{}))
 
-		updatedProfile := &performancev2.PerformanceProfile{}
+		updatedProfile := &profileutil.PerformanceProfileInfo{}
 		key := types.NamespacedName{
 			Name:      profile.Name,
 			Namespace: metav1.NamespaceNone,
@@ -333,7 +334,7 @@ var _ = Describe("Controller", func() {
 
 			BeforeEach(func() {
 				var err error
-				mc, err = machineconfig.New(assetsDir, profile, false)
+				mc, err = machineconfig.New(assetsDir, profile)
 				Expect(err).ToNot(HaveOccurred())
 
 				kc, err = kubeletconfig.New(profile)
@@ -721,7 +722,7 @@ var _ = Describe("Controller", func() {
 
 		It("should remove all components and remove the finalizer on first reconcile loop", func() {
 
-			mc, err := machineconfig.New(assetsDir, profile, false)
+			mc, err := machineconfig.New(assetsDir, profile)
 			Expect(err).ToNot(HaveOccurred())
 
 			kc, err := kubeletconfig.New(profile)
@@ -765,7 +766,7 @@ var _ = Describe("Controller", func() {
 			// verify finalizer deletion
 			key.Name = profile.Name
 			key.Namespace = metav1.NamespaceNone
-			updatedProfile := &performancev2.PerformanceProfile{}
+			updatedProfile := &profileutil.PerformanceProfileInfo{}
 			Expect(r.Get(context.TODO(), key, updatedProfile)).ToNot(HaveOccurred())
 			Expect(hasFinalizer(updatedProfile, finalizer)).To(Equal(false))
 		})

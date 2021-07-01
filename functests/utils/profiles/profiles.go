@@ -3,6 +3,7 @@ package profiles
 import (
 	"context"
 	"fmt"
+	"github.com/openshift-kni/performance-addon-operators/pkg/controller/performanceprofile/components/profile"
 	"reflect"
 	"time"
 
@@ -96,7 +97,7 @@ func All() (*performancev2.PerformanceProfileList, error) {
 	return profiles, nil
 }
 
-func UpdateWithRetry(profile *performancev2.PerformanceProfile) {
+func UpdateWithRetry(profile *profile.PerformanceProfileInfo) {
 	EventuallyWithOffset(1, func() error {
 		if err := testclient.Client.Update(context.TODO(), profile); err != nil {
 			if !errors.IsConflict(err) {

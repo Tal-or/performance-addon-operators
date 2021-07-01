@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	performancev2 "github.com/openshift-kni/performance-addon-operators/api/v2"
 	machineconfigv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 
 	testclient "github.com/openshift-kni/performance-addon-operators/functests/utils/client"
@@ -89,7 +88,7 @@ func GetByNameNoRetry(name string) (*machineconfigv1.MachineConfigPool, error) {
 }
 
 // GetByProfile returns the MCP by a given performance profile
-func GetByProfile(performanceProfile *performancev2.PerformanceProfile) (string, error) {
+func GetByProfile(performanceProfile *profile.PerformanceProfileInfo) (string, error) {
 	mcpLabel := profile.GetMachineConfigLabel(performanceProfile)
 	key, value := components.GetFirstKeyAndValue(mcpLabel)
 	mcpsByLabel, err := GetByLabel(key, value)
@@ -197,7 +196,7 @@ func WaitForCondition(mcpName string, conditionType machineconfigv1.MachineConfi
 }
 
 // WaitForProfilePickedUp waits for the MCP with given name containing the MC created for the PerformanceProfile with the given name
-func WaitForProfilePickedUp(mcpName string, profile *performancev2.PerformanceProfile) {
+func WaitForProfilePickedUp(mcpName string, profile *profile.PerformanceProfileInfo) {
 	runningOnSingleNode, err := cluster.IsSingleNode()
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	testlog.Infof("Waiting for profile %s to be picked up by the %s machine config pool", profile.Name, mcpName)
